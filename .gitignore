@@ -1,0 +1,21 @@
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Entornos virtuales
+venv/
+env/
+*.env
+
+# Archivos de Jupyter
+.ipynb_checkpoints/
+
+# Archivos del sistema operativo
+.DS_Store
+
+# Datos (datasets originales)
+data/raw/*.csv
+
+# Credenciales (ejemplo Kaggle)
+.kaggle/
