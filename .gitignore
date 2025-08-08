@@ -19,3 +19,6 @@ data/raw/*.csv
 
 # Credenciales (ejemplo Kaggle)
 .kaggle/
+
+# Directorio de salida
+output/
