@@ -54,3 +54,13 @@ python scripts/data_summary.py
 ```
 
 El informe se guardará como `output/data_report.html`.
+
+### Paso 3: Análisis Exploratorio de Datos (EDA)
+
+Se ha realizado un análisis exploratorio inicial en el notebook `notebooks/01_basic_data_exploration.ipynb`. Este cuaderno cubre los siguientes pasos:
+
+- Carga de datos con Pandas.
+- Inspección inicial de los datos (`head`, `info`).
+- Identificación y manejo de valores nulos en `TotalCharges`.
+- Cálculo de estadísticas descriptivas.
+- Visualización de la distribución de `MonthlyCharges` (histograma) y la frecuencia de `Churn` (gráfico de barras).
