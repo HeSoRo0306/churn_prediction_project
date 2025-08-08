@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import argparse
+import zipfile
 
-# Esto viene de la librería kaggle; solo funciona si pip install kaggle ya se hizo
 def download_dataset():
     """
     Intenta descargar el dataset de Telco Customer Churn desde Kaggle usando la API.
@@ -21,45 +21,73 @@ def download_dataset():
     kaggle_json_path = os.path.join(home, ".kaggle", "kaggle.json")
     if not os.path.isfile(kaggle_json_path):
         print(f"No se encontró el archivo de credenciales en {kaggle_json_path}.")
-        print("Descarga tu API token desde Kaggle y colócalo ahí. Ejemplo:")
-        print("  1. Ve a tu cuenta en Kaggle > API > Create New API Token")
-        print("  2. Mueve el kaggle.json a ~/.kaggle/ y dale permisos: chmod 600 ~/.kaggle/kaggle.json")
+        print("Descarga tu API token desde Kaggle y colócalo ahí.")
         return False
 
     try:
         api = KaggleApi()
         api.authenticate()
-        # Descarga específica del CSV y lo descomprime en data/raw
-        os.makedirs("data/raw", exist_ok=True)
-        api.dataset_download_file(
-            "blastchar/telco-customer-churn",
-            "WA_Fn-UseC_-Telco-Customer-Churn.csv",
-            path="data/raw"
-        )
-        # El archivo se descarga como un zip, necesitamos descomprimirlo
-        import zipfile
-        zip_path = os.path.join("data", "raw", "WA_Fn-UseC_-Telco-Customer-Churn.csv.zip")
+        
+        dataset_id = "blastchar/telco-customer-churn"
+        file_name = "WA_Fn-UseC_-Telco-Customer-Churn.csv"
+        download_path = os.path.join("data", "raw")
+        final_csv_path = os.path.join(download_path, "telco_churn.csv")
+
+        os.makedirs(download_path, exist_ok=True)
+
+        print(f"Descargando {file_name} de {dataset_id} a {download_path}...")
+        api.dataset_download_file(dataset_id, file_name, path=download_path)
+        
+        zip_path = os.path.join(download_path, f"{file_name}.zip")
         if os.path.isfile(zip_path):
+            print("Descomprimiendo archivo...")
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(os.path.join("data", "raw"))
+                zip_ref.extractall(download_path)
             os.remove(zip_path)
-        # Renombrar si el nombre no coincide con lo que esperas
-        expected = os.path.join("data", "raw", "WA_Fn-UseC_-Telco-Customer-Churn.csv")
-        target = os.path.join("data", "raw", "telco_churn.csv")
-        if os.path.isfile(expected) and not os.path.isfile(target):
-            os.replace(expected, target)
-        print("Descarga automática completada y colocada en data/raw/telco_churn.csv")
+            # Renombrar el archivo extraído al nombre final esperado
+            os.rename(os.path.join(download_path, file_name), final_csv_path)
+
+        print(f"Descarga completada. Archivo guardado en: {final_csv_path}")
         return True
     except Exception as e:
-        print("Falló la descarga automática desde Kaggle:", str(e))
-        print("Puedes descargar el archivo manualmente desde Kaggle y ponerlo en data/raw/telco_churn.csv")
+        print(f"Falló la descarga automática desde Kaggle: {e}")
         return False
 
 def summarize_data(csv_path, output_html):
-    pass
+    """
+    Genera un reporte de perfil de datos y lo guarda como un archivo HTML.
+    """
+    try:
+        from ydata_profiling import ProfileReport
+        
+        print(f"Leyendo el archivo de datos desde {csv_path}...")
+        df = pd.read_csv(csv_path)
+
+        print("Generando el reporte de perfil de datos. Esto puede tardar unos segundos...")
+        profile = ProfileReport(df, title="Reporte de Análisis de Churn de Clientes")
+
+        print(f"Guardando el reporte en {output_html}...")
+        profile.to_file(output_html)
+        print(f"¡Reporte generado con éxito en {output_html}!")
+
+    except FileNotFoundError:
+        print(f"Error: No se encontró el archivo en la ruta: {csv_path}")
+        print("Asegúrate de haber descargado los datos primero con la opción --download.")
+    except Exception as e:
+        print(f"Ocurrió un error inesperado al generar el reporte: {e}")
 
 def count_rows(csv_path):
-    pass
+    """
+    Lee un CSV y cuenta el número de filas y columnas.
+    """
+    try:
+        df = pd.read_csv(csv_path)
+        rows, cols = df.shape
+        print(f"El archivo {os.path.basename(csv_path)} tiene {rows} filas y {cols} columnas.")
+    except FileNotFoundError:
+        print(f"Error: No se encontró el archivo en la ruta: {csv_path}")
+    except Exception as e:
+        print(f"Ocurrió un error inesperado: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="Resumen básico de dataset de churn.")
@@ -72,13 +100,17 @@ def main():
     if args.download:
         success = download_dataset()
         if not success:
-            # si falló, no abortamos forzosamente pero avisamos
-            print("Continuando, pero revisa que el archivo exista antes de hacer el análisis.")
+            print("La descarga falló. Abortando.")
+            return
+
+    # Crear la carpeta de salida si no existe
+    output_dir = os.path.dirname(args.html)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     if args.count:
         count_rows(args.csv_path)
     else:
-        os.makedirs(os.path.dirname(args.html), exist_ok=True)
         summarize_data(args.csv_path, output_html=args.html)
 
 if __name__ == "__main__":
